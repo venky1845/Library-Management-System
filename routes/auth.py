@@ -70,6 +70,17 @@ def register():
             "INSERT INTO users (username, email, password, role) VALUES (%s, %s, %s, %s)",
             (username, email, hashed_password, role)
         )
+        
+        # Get the newly created user_id
+        user_id = cursor.lastrowid
+        
+        # If registering as member, create member profile automatically
+        if role == "member":
+            cursor.execute(
+                "INSERT INTO members (user_id, full_name, email, phone) VALUES (%s, %s, %s, %s)",
+                (user_id, username, email, None)
+            )
+        
         conn.commit()
         return jsonify({"message": "Registration Successful"}), 201
 

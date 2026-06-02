@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — LibraryMS</title>
+  <link rel="stylesheet" href="static/css/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <i class="fa-solid fa-book-open"></i>
+      <span>LibraryMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-item active">
+    <i class="fa-solid fa-gauge-high"></i> Dashboard
+</a>
+
+<a href="/books-page" class="nav-item">
+    <i class="fa-solid fa-book"></i> Books
+</a>
+
+<a href="/members-page" class="nav-item">
+    <i class="fa-solid fa-users"></i> Members
+</a>
+
+<a href="/borrows-page" class="nav-item">
+    <i class="fa-solid fa-arrow-right-arrow-left"></i> Borrows
+</a>
+
+<a href="/fines-page" class="nav-item">
+    <i class="fa-solid fa-indian-rupee-sign"></i> Fines
+</a>
+    </nav>
+    <button class="logout-btn" onclick="logout()">
+      <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </button>
+  </aside>
+
+  <main class="main-content">
+    <header class="top-bar">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Welcome back, <span id="username-display">—</span></p>
+      </div>
+    </header>
+
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-book"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Total Books</span>
+          <span class="stat-value" id="total-books">—</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Total Members</span>
+          <span class="stat-value" id="total-members">—</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-arrow-right-arrow-left"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Active Borrows</span>
+          <span class="stat-value" id="active-borrows">—</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Overdue Books</span>
+          <span class="stat-value" id="overdue-books">—</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="color:var(--success)"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Fines Collected</span>
+          <span class="stat-value" id="fines-collected">—</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-header">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> Overdue Borrows</h2>
+        <a href="/borrows-page" class="view-all-btn">View All</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Member</th><th>Book</th>
+              <th>Due Date</th><th>Days Overdue</th><th>Fine Today (Rs.)</th>
+            </tr>
+          </thead>
+          <tbody id="overdue-tbody">
+            <tr><td colspan="6" class="loading-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="static/js/auth-guard.js"></script>
+  <script src="static/js/dashboard.js"></script>
+</body>
+</html>

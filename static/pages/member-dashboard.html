@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — LibraryMS Member</title>
+  <link rel="stylesheet" href="static/css/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <i class="fa-solid fa-book-open"></i>
+      <span>LibraryMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/member-dashboard" class="nav-item active">
+        <i class="fa-solid fa-gauge-high"></i> Dashboard
+      </a>
+      <a href="/member-books" class="nav-item">
+        <i class="fa-solid fa-book"></i> Browse Books
+      </a>
+      <a href="/member-borrows" class="nav-item">
+        <i class="fa-solid fa-arrow-right-arrow-left"></i> My Borrows
+      </a>
+      <a href="/member-fines" class="nav-item">
+        <i class="fa-solid fa-indian-rupee-sign"></i> My Fines
+      </a>
+    </nav>
+    <button class="logout-btn" onclick="logout()">
+      <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </button>
+  </aside>
+
+  <main class="main-content">
+    <header class="top-bar">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Welcome back, <span id="username-display">—</span></p>
+      </div>
+    </header>
+
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="color:var(--info)"><i class="fa-solid fa-book"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Active Borrows</span>
+          <span class="stat-value" id="active-borrows">—</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Overdue Books</span>
+          <span class="stat-value" id="overdue-borrows">—</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="color:var(--danger)"><i class="fa-solid fa-money-bill"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Unpaid Fines</span>
+          <span class="stat-value" id="unpaid-fines">—</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="color:var(--accent)"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Total Fine Amount</span>
+          <span class="stat-value" id="total-fine-amount">—</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-header">
+        <h2><i class="fa-solid fa-calendar-xmark"></i> Due Soon</h2>
+        <a href="/member-borrows" class="view-all-btn">View All</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Book Title</th>
+              <th>Due Date</th>
+              <th>Days Left</th>
+            </tr>
+          </thead>
+          <tbody id="due-soon-tbody">
+            <tr><td colspan="3" class="loading-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-header">
+        <h2><i class="fa-solid fa-exclamation-circle"></i> Unpaid Fines</h2>
+        <a href="/member-fines" class="view-all-btn">View All</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Book Title</th>
+              <th>Amount (Rs.)</th>
+              <th>Fine Date</th>
+            </tr>
+          </thead>
+          <tbody id="unpaid-fines-tbody">
+            <tr><td colspan="3" class="loading-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-header">
+        <h2><i class="fa-solid fa-info-circle"></i> Member Profile</h2>
+      </div>
+      <div style="padding: 16px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 4px;">Full Name</p>
+            <p style="font-weight: 600; font-size: 16px;" id="profile-name">—</p>
+          </div>
+          <div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 4px;">Email</p>
+            <p style="font-weight: 600; font-size: 16px;" id="profile-email">—</p>
+          </div>
+          <div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 4px;">Phone</p>
+            <p style="font-weight: 600; font-size: 16px;" id="profile-phone">—</p>
+          </div>
+          <div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 4px;">Member Since</p>
+            <p style="font-weight: 600; font-size: 16px;" id="profile-joined">—</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="static/js/auth-guard.js"></script>
+  <script src="static/js/member-dashboard.js"></script>
+</body>
+</html>
