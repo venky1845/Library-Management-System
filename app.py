@@ -5,6 +5,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 
 from routes.auth import auth_bp
+from routes.books import books_bp
 
 load_dotenv()
 
@@ -17,6 +18,7 @@ bcrypt = Bcrypt(app)
 CORS(app, supports_credentials=True)
 
 app.register_blueprint(auth_bp)
+app.register_blueprint(books_bp)
 
 @app.route("/")
 def home():
