@@ -61,5 +61,22 @@ def borrows_page():
 def fines_page():
     return send_from_directory("static/pages", "fines.html")
 
+# ---- Member-only routes ----
+@app.route("/member-dashboard")
+def member_dashboard():
+    return send_from_directory("static/pages", "member-dashboard.html")
+
+@app.route("/member-books")
+def member_books():
+    return send_from_directory("static/pages", "member-books.html")
+
+@app.route("/member-borrows")
+def member_borrows():
+    return send_from_directory("static/pages", "member-borrows.html")
+
+@app.route("/member-fines")
+def member_fines():
+    return send_from_directory("static/pages", "member-fines.html")
+
 if __name__ == "__main__":
     app.run(debug=True)

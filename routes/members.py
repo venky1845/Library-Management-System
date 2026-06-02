@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
+from datetime import date
 from config import get_db
 from routes.auth import login_required, role_required
  
@@ -195,6 +196,149 @@ def member_history(member_id):
         cursor.close()
         conn.close()
  
+ 
+@members_bp.route("/my-profile", methods=["GET"])
+@login_required
+def my_profile():
+    """Get current logged-in member's profile"""
+    conn, cursor = get_db()
+    try:
+        user_id = session.get("user_id")
+        cursor.execute(
+            """
+            SELECT m.*,
+                   COUNT(b.id) AS active_borrow_count
+            FROM members m
+            LEFT JOIN borrows b
+                   ON b.member_id = m.id AND b.status = 'active'
+            WHERE m.user_id = %s
+            GROUP BY m.id
+            """,
+            (user_id,)
+        )
+        member = cursor.fetchone()
+        if not member:
+            return jsonify({"message": "Member profile not found"}), 404
+        return jsonify(member), 200
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@members_bp.route("/my-borrows", methods=["GET"])
+@login_required
+def my_borrows():
+    """Get current member's borrow history"""
+    conn, cursor = get_db()
+    try:
+        user_id = session.get("user_id")
+        
+        # Get member_id from user_id
+        cursor.execute("SELECT id FROM members WHERE user_id=%s", (user_id,))
+        member = cursor.fetchone()
+        if not member:
+            return jsonify({"message": "Member profile not found"}), 404
+        
+        member_id = member["id"]
+        today = date.today()
+        
+        cursor.execute(
+            """
+            SELECT
+                b.id                AS borrow_id,
+                bk.id               AS book_id,
+                bk.title            AS book_title,
+                bk.author           AS book_author,
+                b.borrow_date,
+                b.due_date,
+                b.return_date,
+                b.status,
+                CASE 
+                    WHEN b.status = 'active' AND b.due_date < %s THEN DATEDIFF(%s, b.due_date)
+                    ELSE 0
+                END AS days_overdue,
+                CASE
+                    WHEN b.status = 'active' AND b.due_date < %s THEN DATEDIFF(%s, b.due_date) * 5
+                    ELSE 0
+                END AS fine_if_returned_today
+            FROM borrows b
+            JOIN books bk ON bk.id = b.book_id
+            WHERE b.member_id = %s
+            ORDER BY b.borrow_date DESC
+            """,
+            (today, today, today, today, member_id)
+        )
+        borrows = cursor.fetchall()
+        
+        active_count = sum(1 for b in borrows if b["status"] == "active")
+        overdue_count = sum(1 for b in borrows if b["status"] == "active" and b["days_overdue"] > 0)
+        
+        return jsonify({
+            "total_borrows": len(borrows),
+            "active_borrows": active_count,
+            "overdue_borrows": overdue_count,
+            "borrows": borrows
+        }), 200
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@members_bp.route("/my-fines", methods=["GET"])
+@login_required
+def my_fines():
+    """Get current member's fine status"""
+    conn, cursor = get_db()
+    try:
+        user_id = session.get("user_id")
+        
+        # Get member_id from user_id
+        cursor.execute("SELECT id FROM members WHERE user_id=%s", (user_id,))
+        member = cursor.fetchone()
+        if not member:
+            return jsonify({"message": "Member profile not found"}), 404
+        
+        member_id = member["id"]
+        
+        # Get all fines for this member
+        cursor.execute(
+            """
+            SELECT
+                f.id            AS fine_id,
+                bk.title        AS book_title,
+                bk.author       AS book_author,
+                b.due_date,
+                b.return_date,
+                f.amount,
+                f.is_paid,
+                f.paid_on
+            FROM fines f
+            JOIN borrows b  ON b.id  = f.borrow_id
+            JOIN books   bk ON bk.id = b.book_id
+            WHERE f.member_id = %s
+            ORDER BY f.is_paid ASC, f.id DESC
+            """,
+            (member_id,)
+        )
+        fines = cursor.fetchall()
+        
+        # Calculate summary
+        total_fines = len(fines)
+        unpaid_fines = sum(1 for f in fines if not f["is_paid"])
+        total_amount = sum(float(f["amount"]) for f in fines)
+        unpaid_amount = sum(float(f["amount"]) for f in fines if not f["is_paid"])
+        
+        return jsonify({
+            "total_fines": total_fines,
+            "unpaid_fines": unpaid_fines,
+            "total_amount": float(total_amount),
+            "unpaid_amount": float(unpaid_amount),
+            "fines": fines
+        }), 200
+    finally:
+        cursor.close()
+        conn.close()
+
  
 @members_bp.route("/members/<int:member_id>", methods=["DELETE"])
 @login_required

@@ -492,4 +492,45 @@ body { display: flex; min-height: 100vh; }
   .main-content { margin-left: 60px; padding: 20px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .form-row { grid-template-columns: 1fr; }
+  .modal { width: 90%; max-width: 500px; }
+  .modal-sm { max-width: 90%; }
+  .data-table { font-size: 12px; }
+  .data-table th, .data-table td { padding: 10px 12px; }
+  .btn-icon { width: 28px; height: 28px; font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+  body { font-size: 13px; }
+  .sidebar { width: 50px; padding: 12px 6px; }
+  .main-content { margin-left: 50px; padding: 12px; }
+  .top-bar { flex-direction: column; gap: 12px; }
+  .page-title { font-size: 20px; }
+  .page-sub { font-size: 12px; }
+  .stats-grid { grid-template-columns: 1fr; gap: 12px; }
+  .stat-card { padding: 12px; }
+  .stat-icon { font-size: 24px; }
+  .stat-value { font-size: 18px; }
+  .search-bar { margin: 12px 0; }
+  .section-card { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .view-all-btn { align-self: flex-start; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { font-size: 11px; }
+  .data-table th, .data-table td { padding: 8px; font-size: 11px; }
+  .modal { width: 95%; max-width: 95%; padding: 0; }
+  .modal-header { padding: 12px; }
+  .modal-body { padding: 12px; }
+  .modal-footer { padding: 12px; }
+  .btn-primary, .btn-secondary, .btn-danger { padding: 8px 12px; font-size: 12px; }
+  .form-group input, .form-group select { padding: 8px 10px; font-size: 12px; }
+  .form-group label { font-size: 11px; }
+  .login-box { padding: 24px; max-width: 100%; margin: 0 12px; }
+  .login-logo h1 { font-size: 22px; }
+  .btn-icon { width: 26px; height: 26px; font-size: 13px; }
+  .fine-summary { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fine-card { padding: 12px; }
+  .fine-card-label { font-size: 11px; }
+  .fine-card-value { font-size: 18px; }
+  .tab-bar { flex-wrap: wrap; gap: 6px; }
+  .tab-btn { padding: 6px 12px; font-size: 11px; }
 }

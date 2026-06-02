@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Browse Books — LibraryMS Member</title>
+  <link rel="stylesheet" href="static/css/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand"><i class="fa-solid fa-book-open"></i><span>LibraryMS</span></div>
+    <nav class="sidebar-nav">
+      <a href="/member-dashboard" class="nav-item"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="/member-books" class="nav-item active"><i class="fa-solid fa-book"></i> Browse Books</a>
+      <a href="/member-borrows" class="nav-item"><i class="fa-solid fa-arrow-right-arrow-left"></i> My Borrows</a>
+      <a href="/member-fines" class="nav-item"><i class="fa-solid fa-indian-rupee-sign"></i> My Fines</a>
+    </nav>
+    <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+  </aside>
+
+  <main class="main-content">
+    <header class="top-bar">
+      <div>
+        <h1 class="page-title">Browse Books</h1>
+        <p class="page-sub">Discover available books in our library</p>
+      </div>
+    </header>
+
+    <div class="search-bar">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="search-input" placeholder="Search by title, author, or genre..." oninput="searchBooks()"/>
+    </div>
+
+    <section class="section-card">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Title</th><th>Author</th><th>Genre</th>
+              <th>ISBN</th><th>Available</th><th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="books-tbody">
+            <tr><td colspan="7" class="loading-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- BOOK DETAILS MODAL -->
+  <div class="modal-overlay" id="book-details-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="detail-title">Book Details</h3>
+        <button class="modal-close" onclick="closeDetailsModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Title</label>
+          <p id="detail-title-text" style="font-weight:600;margin-top:4px">—</p>
+        </div>
+        <div class="form-group">
+          <label>Author</label>
+          <p id="detail-author" style="font-weight:600;margin-top:4px">—</p>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Genre</label>
+            <p id="detail-genre" style="font-weight:600;margin-top:4px">—</p>
+          </div>
+          <div class="form-group">
+            <label>ISBN</label>
+            <p id="detail-isbn" style="font-weight:600;margin-top:4px">—</p>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Total Copies</label>
+            <p id="detail-total" style="font-weight:600;margin-top:4px">—</p>
+          </div>
+          <div class="form-group">
+            <label>Available Copies</label>
+            <p id="detail-available" style="font-weight:600;margin-top:4px;color:var(--success)">—</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeDetailsModal()">Close</button>
+        <button class="btn-primary" id="borrow-btn" onclick="borrowBook()" style="display:none">
+          <i class="fa-solid fa-plus"></i> Borrow Book
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="static/js/auth-guard.js"></script>
+  <script src="static/js/member-books.js"></script>
+</body>
+</html>

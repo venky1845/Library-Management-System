@@ -1,9 +1,8 @@
-/* borrows.js */
+
 
 const BASE = 'http://127.0.0.1:5000';
 let currentTab = 'active';
 
-// ---- TABS ----
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -12,7 +11,7 @@ function switchTab(tab) {
   if (tab === 'overdue') loadOverdue();
 }
 
-// ---- ACTIVE BORROWS ----
+
 async function loadActive() {
   document.getElementById('borrows-tbody').innerHTML =
     `<tr><td colspan="7" class="loading-row">Loading...</td></tr>`;

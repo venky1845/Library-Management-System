@@ -24,7 +24,7 @@ async function login() {
   }
 
   if (data.role === "member") {
-    window.location.href = "/members";
+    window.location.href = "/member-dashboard";
   } else {
     window.location.href = "/dashboard";
   }
