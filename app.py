@@ -3,14 +3,17 @@ from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from dotenv import load_dotenv
-
 from routes.auth import auth_bp
+
 from routes.books import books_bp
+from routes.borrows import borrows_bp
+from routes.fines import fines_bp
 
 load_dotenv()
 
 app = Flask(__name__)
-
+app.register_blueprint(borrows_bp)
+app.register_blueprint(fines_bp)
 app.secret_key = os.getenv("SECRET_KEY", os.urandom(24))
 
 bcrypt = Bcrypt(app)
