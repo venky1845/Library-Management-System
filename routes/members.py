@@ -4,6 +4,23 @@ from config import get_db
 from routes.auth import login_required, role_required
  
 members_bp = Blueprint("members", __name__)
+
+
+@members_bp.route("/me", methods=["GET"])
+@login_required
+def me():
+    """Return current logged-in user's id and role."""
+    conn, cursor = get_db()
+    try:
+        user_id = session.get("user_id")
+        cursor.execute("SELECT id, role FROM users WHERE id=%s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        return jsonify({"user_id": user["id"], "role": user["role"]}), 200
+    finally:
+        cursor.close()
+        conn.close()
  
 @members_bp.route("/members", methods=["POST"])
 @login_required
@@ -64,8 +81,11 @@ def get_members():
             SELECT m.*,
                    COUNT(b.id) AS active_borrow_count
             FROM members m
+            LEFT JOIN users u
+                   ON u.id = m.user_id
             LEFT JOIN borrows b
                    ON b.member_id = m.id AND b.status = 'active'
+            WHERE m.user_id IS NULL OR u.role = 'member'
             GROUP BY m.id
             """
         )
@@ -109,22 +129,28 @@ def get_member(member_id):
 @role_required("admin", "librarian")
 def update_member(member_id):
     data = request.get_json()
- 
+    caller_role = session.get("role")
+
     conn, cursor = get_db()
     try:
         cursor.execute("SELECT * FROM members WHERE id=%s", (member_id,))
         member = cursor.fetchone()
         if not member:
             return jsonify({"message": "Member not found"}), 404
- 
+
         full_name = data.get("full_name", member["full_name"]).strip()
         email     = data.get("email", member["email"]).strip()
         phone     = data.get("phone", member["phone"])
-        is_active = data.get("is_active", member["is_active"])
- 
+
+        # Only admin can change is_active (deactivate/reactivate)
+        if caller_role == "admin":
+            is_active = data.get("is_active", member["is_active"])
+        else:
+            is_active = member["is_active"]  # librarian keeps existing status
+
         if not full_name or not email:
             return jsonify({"message": "Full name and email are required"}), 400
- 
+
         # Check duplicate email (excluding current member)
         cursor.execute(
             "SELECT id FROM members WHERE email=%s AND id != %s",
@@ -132,7 +158,7 @@ def update_member(member_id):
         )
         if cursor.fetchone():
             return jsonify({"message": "Another member with this email already exists"}), 400
- 
+
         cursor.execute(
             """
             UPDATE members
@@ -142,13 +168,13 @@ def update_member(member_id):
             (full_name, email, phone, is_active, member_id)
         )
         conn.commit()
- 
+
         action = "updated"
-        if not is_active:
+        if caller_role == "admin" and not is_active:
             action = "deactivated"
- 
+
         return jsonify({"message": f"Member {action} successfully"}), 200
- 
+
     finally:
         cursor.close()
         conn.close()
@@ -349,14 +375,42 @@ def deactivate_member(member_id):
         cursor.execute("SELECT id FROM members WHERE id=%s", (member_id,))
         if not cursor.fetchone():
             return jsonify({"message": "Member not found"}), 404
- 
+
         cursor.execute(
             "UPDATE members SET is_active=FALSE WHERE id=%s",
             (member_id,)
         )
         conn.commit()
         return jsonify({"message": "Member deactivated successfully"}), 200
- 
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@members_bp.route("/members/<int:member_id>/delete", methods=["DELETE"])
+@login_required
+@role_required("admin")
+def delete_member(member_id):
+    """Permanently delete a member (admin only)."""
+    conn, cursor = get_db()
+    try:
+        cursor.execute("SELECT id FROM members WHERE id=%s", (member_id,))
+        if not cursor.fetchone():
+            return jsonify({"message": "Member not found"}), 404
+
+        # Block deletion if member has active borrows
+        cursor.execute(
+            "SELECT COUNT(*) AS cnt FROM borrows WHERE member_id=%s AND status='active'",
+            (member_id,)
+        )
+        if cursor.fetchone()["cnt"] > 0:
+            return jsonify({"message": "Cannot delete member with active borrows"}), 400
+
+        cursor.execute("DELETE FROM members WHERE id=%s", (member_id,))
+        conn.commit()
+        return jsonify({"message": "Member deleted permanently"}), 200
+
     finally:
         cursor.close()
         conn.close()

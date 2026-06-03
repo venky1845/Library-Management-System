@@ -1,7 +1,16 @@
-
+/* borrows.js */
 
 const BASE = 'http://127.0.0.1:5000';
 let currentTab = 'active';
+
+// ---- DATE FORMAT ----
+function formatDate(raw) {
+  if (!raw) return '—';
+  const d = new Date(raw);
+  if (isNaN(d)) return raw;           // already a plain string like "2026-06-16", return as-is
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  // e.g. "16 Jun 2026"
+}
 
 function switchTab(tab) {
   currentTab = tab;
@@ -31,8 +40,8 @@ function renderActive(rows) {
       <td>${i + 1}</td>
       <td><strong>${r.member_name}</strong><br><span style="color:var(--text-muted);font-size:12px">${r.member_email}</span></td>
       <td>${r.book_title}<br><span style="color:var(--text-muted);font-size:12px">${r.book_author}</span></td>
-      <td>${r.borrow_date}</td>
-      <td>${r.due_date}</td>
+      <td>${formatDate(r.borrow_date)}</td>
+      <td>${formatDate(r.due_date)}</td>
       <td><span class="badge badge-warning">Active</span></td>
       <td>
         <button class="btn-icon btn-icon-pay" onclick="confirmReturn(${r.borrow_id}, '${r.book_title.replace(/'/g,"\\'")}', '${r.member_name.replace(/'/g,"\\'")}')">
@@ -63,8 +72,8 @@ function renderOverdue(rows) {
       <td>${i + 1}</td>
       <td><strong>${r.member_name}</strong><br><span style="color:var(--text-muted);font-size:12px">${r.member_email}</span></td>
       <td>${r.book_title}<br><span style="color:var(--text-muted);font-size:12px">${r.book_author}</span></td>
-      <td>${r.borrow_date}</td>
-      <td>${r.due_date}</td>
+      <td>${formatDate(r.borrow_date)}</td>
+      <td>${formatDate(r.due_date)}</td>
       <td><span class="badge badge-danger">${r.days_overdue} days overdue</span></td>
       <td>
         <span style="color:var(--danger);font-weight:600;font-size:12px">₹${r.fine_if_returned_today}</span>
@@ -104,7 +113,7 @@ async function issueBook() {
   if (!res.ok) { errEl.textContent = data.message; return; }
 
   closeIssueModal();
-  showToast(`${data.message} — Due: ${data.due_date}`);
+  showToast(`${data.message} — Due: ${formatDate(data.due_date)}`);
   loadActive();
 }
 

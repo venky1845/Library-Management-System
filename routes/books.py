@@ -178,9 +178,33 @@ def delete_book(book_id):
         if not cursor.fetchone():
             return jsonify({"message": "Book not found"}), 404
 
+        # Block if any active borrows exist
+        cursor.execute(
+            "SELECT COUNT(*) FROM borrows WHERE book_id=%s AND status='active'",
+            (book_id,)
+        )
+        row = cursor.fetchone()
+        active_count = row[0] if isinstance(row, (list, tuple)) else list(row.values())[0]
+
+        if active_count > 0:
+            return jsonify({
+                "message": f"Cannot delete — this book has {active_count} active borrow{'s' if active_count > 1 else ''}. Ensure all copies are returned first."
+            }), 400
+
+        # Delete related fines first (foreign key: fines → borrows → books)
+        cursor.execute(
+            "DELETE f FROM fines f JOIN borrows b ON f.borrow_id = b.id WHERE b.book_id=%s",
+            (book_id,)
+        )
+        # Delete related borrow history
+        cursor.execute("DELETE FROM borrows WHERE book_id=%s", (book_id,))
+        # Now safe to delete the book
         cursor.execute("DELETE FROM books WHERE id=%s", (book_id,))
         conn.commit()
         return jsonify({"message": "Book deleted successfully"}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"message": f"Delete failed: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()
