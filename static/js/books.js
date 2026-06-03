@@ -13,12 +13,13 @@ async function loadBooks() {
 function renderBooks(books) {
   const tbody = document.getElementById('books-tbody');
   if (!books.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="loading-row">No books found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="loading-row">No books found</td></tr>`;
     return;
   }
   tbody.innerHTML = books.map((b, i) => `
     <tr>
       <td>${i + 1}</td>
+      <td style="font-size:12px;color:var(--text-muted);font-family:monospace">#${b.id}</td>
       <td><strong>${b.title}</strong></td>
       <td>${b.author}</td>
       <td>${b.genre || '—'}</td>

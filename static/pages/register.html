@@ -35,14 +35,21 @@
       <input type="email" id="email" placeholder="Enter email">
     </div>
 
-    <div class="form-group">
+    <div class="form-group" id="password-group">
       <label>Password</label>
-      <input type="password" id="password" placeholder="Enter password">
+      <input type="password" id="password" autocomplete="new-password" placeholder="Enter password">
+    </div>
+
+    <div id="member-note" style="display:none;">
+      <p style="color:var(--text-muted);font-size:13px;background:rgba(99,102,241,0.1);padding:10px 14px;border-radius:8px;margin:0 0 12px;">
+        <i class="fa-solid fa-circle-info" style="color:var(--accent)"></i>
+        Members don't need a password. Log in using your full name and email.
+      </p>
     </div>
 
     <div class="form-group">
       <label>Role</label>
-      <select id="role">
+      <select id="role" onchange="togglePasswordField()">
         <option value="member">Member</option>
         <option value="librarian">Librarian</option>
         <option value="admin">Admin</option>
@@ -65,6 +72,15 @@
 </div>
 
 <script src="/static/js/register.js"></script>
+<script>
+  function togglePasswordField() {
+    const isMember = document.getElementById('role').value === 'member';
+    document.getElementById('password-group').style.display = isMember ? 'none' : 'block';
+    document.getElementById('member-note').style.display    = isMember ? 'block' : 'none';
+    if (isMember) document.getElementById('password').value = '';
+  }
+  togglePasswordField(); // run on load since member is default
+</script>
 
 </body>
 </html>

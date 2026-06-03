@@ -13,7 +13,7 @@ auth_bp = Blueprint("auth", __name__)
 def login_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if "user_id" not in session:
+        if "user_id" not in session and "member_id" not in session:
             return jsonify({"message": "Login Required"}), 401
         return func(*args, **kwargs)
     return wrapper
@@ -89,6 +89,36 @@ def register():
         conn.close()
 
 
+@auth_bp.route("/member-login", methods=["POST"])
+def member_login():
+    data      = request.get_json()
+    full_name = (data.get("full_name") or "").strip()
+    email     = (data.get("email") or "").strip()
+
+    if not full_name or not email:
+        return jsonify({"message": "Full name and email are required"}), 400
+
+    conn, cursor = get_db()
+    try:
+        cursor.execute(
+            "SELECT * FROM members WHERE email=%s AND full_name=%s AND is_active=TRUE",
+            (email, full_name)
+        )
+        member = cursor.fetchone()
+    finally:
+        cursor.close()
+        conn.close()
+
+    if not member:
+        return jsonify({"message": "No active member found with that name and email"}), 401
+
+    session["member_id"]   = member["id"]
+    session["member_name"] = member["full_name"]
+    session["role"]        = "member"
+
+    return jsonify({"message": "Login Successful", "role": "member"})
+
+
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
@@ -130,6 +160,12 @@ def logout():
 @auth_bp.route("/profile", methods=["GET"])
 @login_required
 def profile():
+    if "member_id" in session and "user_id" not in session:
+        return jsonify({
+            "user_id":  session["member_id"],
+            "username": session["member_name"],
+            "role":     "member"
+        })
     return jsonify({
         "user_id":  session["user_id"],
         "username": session["username"],
