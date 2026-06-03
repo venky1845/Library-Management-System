@@ -1,35 +1,54 @@
 /* login.js */
 
-async function login() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const errEl = document.getElementById("login-error");
+function switchTab(tab) {
+  document.getElementById('tab-staff').classList.toggle('active', tab === 'staff');
+  document.getElementById('tab-member').classList.toggle('active', tab === 'member');
+  document.getElementById('panel-staff').classList.toggle('active', tab === 'staff');
+  document.getElementById('panel-member').classList.toggle('active', tab === 'member');
+}
 
-  if (!email || !password) {
-    errEl.textContent = "Email and password are required";
-    return;
-  }
+async function staffLogin() {
+  const email    = document.getElementById('staff-email').value.trim();
+  const password = document.getElementById('staff-password').value.trim();
+  const errEl    = document.getElementById('staff-error');
 
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ email, password }),
+  if (!email || !password) { errEl.textContent = 'Email and password are required'; return; }
+
+  const res  = await fetch('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email, password })
   });
   const data = await res.json();
 
-  if (!res.ok) {
-    errEl.textContent = data.message;
-    return;
-  }
+  if (!res.ok) { errEl.textContent = data.message; return; }
 
-  if (data.role === "member") {
-    window.location.href = "/member-dashboard";
-  } else {
-    window.location.href = "/dashboard";
-  }
+  window.location.href = data.role === 'member' ? '/member-dashboard' : '/dashboard';
 }
 
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") login();
+async function memberLogin() {
+  const full_name = document.getElementById('member-name').value.trim();
+  const email     = document.getElementById('member-email').value.trim();
+  const errEl     = document.getElementById('member-error');
+
+  if (!full_name || !email) { errEl.textContent = 'Full name and email are required'; return; }
+
+  const res  = await fetch('/member-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ full_name, email })
+  });
+  const data = await res.json();
+
+  if (!res.ok) { errEl.textContent = data.message; return; }
+
+  window.location.href = '/member-dashboard';
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    document.getElementById('tab-staff').classList.contains('active') ? staffLogin() : memberLogin();
+  }
 });

@@ -229,19 +229,34 @@ def my_profile():
     """Get current logged-in member's profile"""
     conn, cursor = get_db()
     try:
-        user_id = session.get("user_id")
-        cursor.execute(
-            """
-            SELECT m.*,
-                   COUNT(b.id) AS active_borrow_count
-            FROM members m
-            LEFT JOIN borrows b
-                   ON b.member_id = m.id AND b.status = 'active'
-            WHERE m.user_id = %s
-            GROUP BY m.id
-            """,
-            (user_id,)
-        )
+        # Member login sets member_id directly in session
+        if "member_id" in session:
+            cursor.execute(
+                """
+                SELECT m.*,
+                       COUNT(b.id) AS active_borrow_count
+                FROM members m
+                LEFT JOIN borrows b
+                       ON b.member_id = m.id AND b.status = 'active'
+                WHERE m.id = %s
+                GROUP BY m.id
+                """,
+                (session["member_id"],)
+            )
+        else:
+            # Staff/user account linked member
+            cursor.execute(
+                """
+                SELECT m.*,
+                       COUNT(b.id) AS active_borrow_count
+                FROM members m
+                LEFT JOIN borrows b
+                       ON b.member_id = m.id AND b.status = 'active'
+                WHERE m.user_id = %s
+                GROUP BY m.id
+                """,
+                (session.get("user_id"),)
+            )
         member = cursor.fetchone()
         if not member:
             return jsonify({"message": "Member profile not found"}), 404
@@ -257,15 +272,15 @@ def my_borrows():
     """Get current member's borrow history"""
     conn, cursor = get_db()
     try:
-        user_id = session.get("user_id")
-        
-        # Get member_id from user_id
-        cursor.execute("SELECT id FROM members WHERE user_id=%s", (user_id,))
-        member = cursor.fetchone()
-        if not member:
-            return jsonify({"message": "Member profile not found"}), 404
-        
-        member_id = member["id"]
+        # Resolve member_id from session
+        if "member_id" in session:
+            member_id = session["member_id"]
+        else:
+            cursor.execute("SELECT id FROM members WHERE user_id=%s", (session.get("user_id"),))
+            member = cursor.fetchone()
+            if not member:
+                return jsonify({"message": "Member profile not found"}), 404
+            member_id = member["id"]
         today = date.today()
         
         cursor.execute(
@@ -316,15 +331,15 @@ def my_fines():
     """Get current member's fine status"""
     conn, cursor = get_db()
     try:
-        user_id = session.get("user_id")
-        
-        # Get member_id from user_id
-        cursor.execute("SELECT id FROM members WHERE user_id=%s", (user_id,))
-        member = cursor.fetchone()
-        if not member:
-            return jsonify({"message": "Member profile not found"}), 404
-        
-        member_id = member["id"]
+        # Resolve member_id from session
+        if "member_id" in session:
+            member_id = session["member_id"]
+        else:
+            cursor.execute("SELECT id FROM members WHERE user_id=%s", (session.get("user_id"),))
+            member = cursor.fetchone()
+            if not member:
+                return jsonify({"message": "Member profile not found"}), 404
+            member_id = member["id"]
         
         # Get all fines for this member
         cursor.execute(

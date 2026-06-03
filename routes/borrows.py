@@ -258,14 +258,15 @@ def member_borrow_book():
 
     conn, cursor = get_db()
     try:
-        # --- Get member_id from session ---
-        user_id = session.get("user_id")
-        cursor.execute("SELECT id FROM members WHERE user_id=%s", (user_id,))
-        member = cursor.fetchone()
-        if not member:
-            return jsonify({"message": "Member profile not found"}), 404
-        
-        member_id = member["id"]
+        # --- Resolve member_id from session ---
+        if "member_id" in session:
+            member_id = session["member_id"]
+        else:
+            cursor.execute("SELECT id FROM members WHERE user_id=%s", (session.get("user_id"),))
+            member = cursor.fetchone()
+            if not member:
+                return jsonify({"message": "Member profile not found"}), 404
+            member_id = member["id"]
 
         # --- Check member is active ---
         cursor.execute("SELECT is_active FROM members WHERE id=%s", (member_id,))
