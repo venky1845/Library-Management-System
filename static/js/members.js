@@ -3,32 +3,6 @@
 const BASE = 'http://127.0.0.1:5000';
 let allMembers = [];
 let deactivateTargetId = null;
-let deleteTargetId = null;
-let currentUserRole = null;
-
-// ---- FETCH ROLE ----
-async function fetchCurrentRole() {
-  // Primary: read from sessionStorage (set during login)
-  const stored = sessionStorage.getItem('user_role') || localStorage.getItem('user_role');
-  if (stored) {
-    currentUserRole = stored;
-    console.log('[Members] role from storage:', currentUserRole);
-    return;
-  }
-  // Fallback: ask the server
-  try {
-    const res = await fetch(`${BASE}/me`, { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      console.log('[Members] /me response:', data);
-      currentUserRole = data.role;
-    } else {
-      console.warn('[Members] /me returned', res.status);
-    }
-  } catch (err) {
-    console.error('[Members] /me error:', err);
-  }
-}
 
 // ---- LOAD ----
 async function loadMembers() {
@@ -39,16 +13,13 @@ async function loadMembers() {
 
 function renderMembers(members) {
   const tbody = document.getElementById('members-tbody');
-  const isAdmin = currentUserRole === 'admin';
-
   if (!members.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="loading-row">No members found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-row">No members found</td></tr>`;
     return;
   }
   tbody.innerHTML = members.map((m, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td style="font-size:12px;color:var(--text-muted);font-family:monospace">#${m.id}</td>
       <td><strong>${m.full_name}</strong></td>
       <td>${m.email}</td>
       <td>${m.phone || '—'}</td>
@@ -62,20 +33,9 @@ function renderMembers(members) {
         <button class="btn-icon btn-icon-edit" onclick="viewHistory(${m.id})" title="View History">
           <i class="fa-solid fa-clock-rotate-left"></i>
         </button>
-        <button class="btn-icon" style="background:rgba(99,102,241,0.15);color:#6366f1" title="Edit Member"
-          onclick="openEditModal(${m.id}, '${m.full_name.replace(/'/g,"\\'")}', '${m.email.replace(/'/g,"\\'")}', '${(m.phone||'').replace(/'/g,"\\'")}')">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        ${isAdmin
-          ? (m.is_active
-              ? `<button class="btn-icon btn-icon-delete" title="Deactivate" onclick="openDeactivateModal(${m.id}, '${m.full_name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-ban"></i></button>`
-              : `<button class="btn-icon" style="background:rgba(34,197,94,0.15);color:var(--success)" title="Reactivate" onclick="reactivateMember(${m.id})"><i class="fa-solid fa-check"></i></button>`
-            )
-          : `<button class="btn-icon" style="opacity:.4;cursor:not-allowed" title="Admin only" disabled><i class="fa-solid fa-ban"></i></button>`
-        }
-        ${isAdmin
-          ? `<button class="btn-icon" style="background:rgba(220,38,38,0.15);color:#dc2626" title="Delete permanently" onclick="openDeleteModal(${m.id}, '${m.full_name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>`
-          : `<button class="btn-icon" style="opacity:.4;cursor:not-allowed" title="Admin only" disabled><i class="fa-solid fa-trash"></i></button>`
+        ${m.is_active
+          ? `<button class="btn-icon btn-icon-delete" onclick="openDeactivateModal(${m.id}, '${m.full_name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-ban"></i></button>`
+          : `<button class="btn-icon" style="background:rgba(34,197,94,0.15);color:var(--success)" onclick="reactivateMember(${m.id})"><i class="fa-solid fa-check"></i></button>`
         }
       </td>
     </tr>
@@ -126,42 +86,6 @@ async function saveMember() {
   loadMembers();
 }
 
-// ---- EDIT MEMBER MODAL ----
-let editTargetId = null;
-
-function openEditModal(id, full_name, email, phone) {
-  editTargetId = id;
-  document.getElementById('edit-name').value  = full_name;
-  document.getElementById('edit-email').value = email;
-  document.getElementById('edit-phone').value = phone;
-  document.getElementById('edit-error').textContent = '';
-  document.getElementById('edit-modal').classList.add('open');
-}
-function closeEditModal() {
-  document.getElementById('edit-modal').classList.remove('open');
-}
-
-async function saveEdit() {
-  const full_name = document.getElementById('edit-name').value.trim();
-  const email     = document.getElementById('edit-email').value.trim();
-  const phone     = document.getElementById('edit-phone').value.trim();
-  const errEl     = document.getElementById('edit-error');
-
-  if (!full_name || !email) { errEl.textContent = 'Name and email are required'; return; }
-
-  const res  = await fetch(`${BASE}/members/${editTargetId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ full_name, email, phone })
-  });
-  const data = await res.json();
-  if (!res.ok) { errEl.textContent = data.message; return; }
-  closeEditModal();
-  showToast(data.message);
-  loadMembers();
-}
-
 // ---- DEACTIVATE ----
 function openDeactivateModal(id, name) {
   deactivateTargetId = id;
@@ -189,23 +113,6 @@ async function reactivateMember(id) {
   });
   const data = await res.json();
   if (res.ok) { showToast('Member reactivated'); loadMembers(); }
-  else showToast(data.message, 'error');
-}
-
-// ---- DELETE ----
-function openDeleteModal(id, name) {
-  deleteTargetId = id;
-  document.getElementById('delete-member-name').textContent = name;
-  document.getElementById('delete-modal').classList.add('open');
-}
-function closeDeleteModal() {
-  document.getElementById('delete-modal').classList.remove('open');
-}
-async function confirmDelete() {
-  const res  = await fetch(`${BASE}/members/${deleteTargetId}/delete`, { method: 'DELETE', credentials: 'include' });
-  const data = await res.json();
-  closeDeleteModal();
-  if (res.ok) { showToast(data.message); loadMembers(); }
   else showToast(data.message, 'error');
 }
 
@@ -247,9 +154,4 @@ function closeHistoryModal() {
   document.getElementById('history-modal').classList.remove('open');
 }
 
-// ---- INIT ----
-(async () => {
-  await fetchCurrentRole();
-  console.log('[Members] currentUserRole =', currentUserRole);  // debug: check browser console
-  loadMembers();
-})();
+loadMembers();

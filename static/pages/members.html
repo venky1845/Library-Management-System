@@ -40,7 +40,7 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>#</th><th>ID</th><th>Full Name</th><th>Email</th><th>Phone</th>
+              <th>#</th><th>Full Name</th><th>Email</th><th>Phone</th>
               <th>Active Borrows</th><th>Status</th><th>Actions</th>
             </tr>
           </thead>
@@ -87,35 +87,6 @@
     </div>
   </div>
 
-  <!-- EDIT MEMBER MODAL -->
-  <div class="modal-overlay" id="edit-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Edit Member</h3>
-        <button class="modal-close" onclick="closeEditModal()"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Full Name *</label>
-          <input type="text" id="edit-name" placeholder="Full name"/>
-        </div>
-        <div class="form-group">
-          <label>Email *</label>
-          <input type="email" id="edit-email" placeholder="Email address"/>
-        </div>
-        <div class="form-group">
-          <label>Phone</label>
-          <input type="text" id="edit-phone" placeholder="Phone number"/>
-        </div>
-        <div id="edit-error" class="form-error"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
-        <button class="btn-primary" onclick="saveEdit()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
-      </div>
-    </div>
-  </div>
-
   <!-- DEACTIVATE CONFIRM MODAL -->
   <div class="modal-overlay" id="deactivate-modal">
     <div class="modal modal-sm">
@@ -157,23 +128,6 @@
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" onclick="closeHistoryModal()">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- DELETE CONFIRM MODAL -->
-  <div class="modal-overlay" id="delete-modal">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3>Delete Member</h3>
-        <button class="modal-close" onclick="closeDeleteModal()"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="modal-body">
-        <p>Permanently delete <strong id="delete-member-name"></strong>? This action <strong>cannot be undone</strong> and will remove all their data.</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-        <button class="btn-danger" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
       </div>
     </div>
   </div>
