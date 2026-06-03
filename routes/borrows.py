@@ -5,85 +5,112 @@ from routes.auth import login_required, role_required
 
 borrows_bp = Blueprint("borrows", __name__)
 
-# ---------------------------------------------------------------------------
-# POST /borrow — Issue a book to a member
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------
+# Borrow Book
+# ------------------------------------------------------------------
 
 @borrows_bp.route("/borrow", methods=["POST"])
 @login_required
 @role_required("admin", "librarian")
 def borrow_book():
-    data      = request.get_json()
+
+    data = request.get_json()
+
     member_id = data.get("member_id")
-    book_id   = data.get("book_id")
+    book_id = data.get("book_id")
 
     if not member_id or not book_id:
-        return jsonify({"message": "member_id and book_id are required"}), 400
+        return jsonify({
+            "message": "member_id and book_id are required"
+        }), 400
 
     conn, cursor = get_db()
-    try:
-        # --- Check member exists and is active ---
-        cursor.execute("SELECT * FROM members WHERE id=%s", (member_id,))
-        member = cursor.fetchone()
-        if not member:
-            return jsonify({"message": "Member not found"}), 404
-        if not member["is_active"]:
-            return jsonify({"message": "Member account is deactivated"}), 403
 
-        # --- Check unpaid fines ---
+    try:
+
+        # Check member
         cursor.execute(
-            "SELECT id FROM fines WHERE member_id=%s AND is_paid=FALSE",
+            "SELECT * FROM members WHERE id=%s",
             (member_id,)
         )
-        if cursor.fetchone():
+        member = cursor.fetchone()
+
+        if not member:
             return jsonify({
-                "message": "Member has unpaid fines. Please clear dues before borrowing"
+                "message": "Member not found"
+            }), 404
+
+        if not member["is_active"]:
+            return jsonify({
+                "message": "Member is inactive"
             }), 403
 
-        # --- Check book exists ---
-        cursor.execute("SELECT * FROM books WHERE id=%s", (book_id,))
-        book = cursor.fetchone()
-        if not book:
-            return jsonify({"message": "Book not found"}), 404
-
-        # --- Check availability ---
-        if book["available_copies"] < 1:
-            return jsonify({"message": "No available copies for this book"}), 400
-
-        # --- Check if member already has this book borrowed ---
+        # Check unpaid fines
         cursor.execute(
             """
-            SELECT id FROM borrows
-            WHERE member_id=%s AND book_id=%s AND status='active'
+            SELECT *
+            FROM fines
+            WHERE member_id=%s
+            AND is_paid=FALSE
             """,
-            (member_id, book_id)
+            (member_id,)
         )
+
         if cursor.fetchone():
-            return jsonify({"message": "Member already has this book borrowed"}), 400
+            return jsonify({
+                "message": "Member has unpaid fines"
+            }), 400
 
-        # --- Issue the book ---
+        # Check book
+        cursor.execute(
+            "SELECT * FROM books WHERE id=%s",
+            (book_id,)
+        )
+
+        book = cursor.fetchone()
+
+        if not book:
+            return jsonify({
+                "message": "Book not found"
+            }), 404
+
+        if book["available_copies"] <= 0:
+            return jsonify({
+                "message": "No copies available"
+            }), 400
+
         borrow_date = date.today()
-        due_date    = borrow_date + timedelta(days=14)
+        due_date = borrow_date + timedelta(days=14)
 
         cursor.execute(
             """
-            INSERT INTO borrows (member_id, book_id, borrow_date, due_date)
-            VALUES (%s, %s, %s, %s)
-            """,
+            INSERT INTO borrows
             (member_id, book_id, borrow_date, due_date)
+            VALUES (%s,%s,%s,%s)
+            """,
+            (
+                member_id,
+                book_id,
+                borrow_date,
+                due_date
+            )
         )
 
-        # --- Reduce available copies ---
         cursor.execute(
-            "UPDATE books SET available_copies = available_copies - 1 WHERE id=%s",
+            """
+            UPDATE books
+            SET available_copies = available_copies - 1
+            WHERE id=%s
+            """,
             (book_id,)
         )
 
         conn.commit()
+
         return jsonify({
-            "message":     "Book issued successfully",
+            "message": "Book borrowed successfully",
             "borrow_date": str(borrow_date),
-            "due_date":    str(due_date)
+            "due_date": str(due_date)
         }), 201
 
     finally:
@@ -91,249 +118,241 @@ def borrow_book():
         conn.close()
 
 
-# ---------------------------------------------------------------------------
-# POST /return/<borrow_id> — Return a book & calculate fine if overdue
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------
+# Return Book
+# ------------------------------------------------------------------
 
 @borrows_bp.route("/return/<int:borrow_id>", methods=["POST"])
 @login_required
 @role_required("admin", "librarian")
 def return_book(borrow_id):
+
     conn, cursor = get_db()
+
     try:
-        # --- Check borrow record ---
-        cursor.execute("SELECT * FROM borrows WHERE id=%s", (borrow_id,))
+
+        cursor.execute(
+            "SELECT * FROM borrows WHERE id=%s",
+            (borrow_id,)
+        )
+
         borrow = cursor.fetchone()
+
         if not borrow:
-            return jsonify({"message": "Borrow record not found"}), 404
+            return jsonify({
+                "message": "Borrow record not found"
+            }), 404
 
         if borrow["status"] == "returned":
-            return jsonify({"message": "Book already returned"}), 400
+            return jsonify({
+                "message": "Book already returned"
+            }), 400
 
         return_date = date.today()
-        due_date    = borrow["due_date"]
 
-        # --- Calculate fine if overdue ---
-        fine_amount  = 0
-        fine_created = False
-
-        if return_date > due_date:
-            overdue_days = (return_date - due_date).days
-            fine_amount  = overdue_days * 5  # Rs. 5 per day
-
-            cursor.execute(
-                """
-                INSERT INTO fines (borrow_id, member_id, amount)
-                VALUES (%s, %s, %s)
-                """,
-                (borrow_id, borrow["member_id"], fine_amount)
-            )
-            fine_created = True
-
-        # --- Update borrow record ---
         cursor.execute(
             """
             UPDATE borrows
-            SET return_date=%s, status='returned'
+            SET return_date=%s,
+                status='returned'
             WHERE id=%s
             """,
             (return_date, borrow_id)
         )
 
-        # --- Increase available copies ---
         cursor.execute(
-            "UPDATE books SET available_copies = available_copies + 1 WHERE id=%s",
+            """
+            UPDATE books
+            SET available_copies = available_copies + 1
+            WHERE id=%s
+            """,
             (borrow["book_id"],)
         )
 
+        fine_amount = 0
+
+        overdue_days = (return_date - borrow["due_date"]).days
+
+        if overdue_days > 0:
+
+            fine_amount = overdue_days * 5
+
+            cursor.execute(
+                """
+                INSERT INTO fines
+                (borrow_id, member_id, amount)
+                VALUES (%s,%s,%s)
+                """,
+                (
+                    borrow_id,
+                    borrow["member_id"],
+                    fine_amount
+                )
+            )
+
         conn.commit()
 
-        response = {
-            "message":     "Book returned successfully",
-            "return_date": str(return_date),
-            "fine":        fine_amount
-        }
-        if fine_created:
-            response["fine_message"] = f"Rs. {fine_amount} fine created for overdue return"
-
-        return jsonify(response), 200
+        return jsonify({
+            "message": "Book returned successfully",
+            "fine_amount": fine_amount
+        })
 
     finally:
         cursor.close()
         conn.close()
 
 
-# ---------------------------------------------------------------------------
-# GET /borrows/active — All active borrows
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------
+# Active Borrows
+# ------------------------------------------------------------------
 
 @borrows_bp.route("/borrows/active", methods=["GET"])
 @login_required
 @role_required("admin", "librarian")
 def active_borrows():
+
     conn, cursor = get_db()
+
     try:
-        cursor.execute(
-            """
+
+        cursor.execute("""
             SELECT
-                b.id                AS borrow_id,
-                m.full_name         AS member_name,
-                m.email             AS member_email,
-                bk.title            AS book_title,
-                bk.author           AS book_author,
+                b.id,
+                m.full_name,
+                bk.title,
                 b.borrow_date,
                 b.due_date
             FROM borrows b
-            JOIN members m  ON m.id  = b.member_id
-            JOIN books   bk ON bk.id = b.book_id
-            WHERE b.status = 'active'
-            ORDER BY b.due_date ASC
-            """
-        )
+            JOIN members m
+                ON b.member_id = m.id
+            JOIN books bk
+                ON b.book_id = bk.id
+            WHERE b.status='active'
+        """)
+
         borrows = cursor.fetchall()
+
         return jsonify({
-            "total_active": len(borrows),
-            "borrows": borrows
-        }), 200
+            "success": True,
+            "data": borrows
+        })
+
     finally:
         cursor.close()
         conn.close()
 
 
-# ---------------------------------------------------------------------------
-# GET /borrows/overdue — All overdue borrows
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------
+# Overdue Borrows
+# ------------------------------------------------------------------
 
 @borrows_bp.route("/borrows/overdue", methods=["GET"])
 @login_required
 @role_required("admin", "librarian")
 def overdue_borrows():
+
     conn, cursor = get_db()
+
     try:
-        today = date.today()
-        cursor.execute(
-            """
+
+        cursor.execute("""
             SELECT
-                b.id                        AS borrow_id,
-                m.full_name                 AS member_name,
-                m.email                     AS member_email,
-                bk.title                    AS book_title,
-                bk.author                   AS book_author,
+                b.id,
+                m.full_name,
+                bk.title,
                 b.borrow_date,
-                b.due_date,
-                DATEDIFF(%s, b.due_date)    AS days_overdue,
-                DATEDIFF(%s, b.due_date)*5  AS fine_if_returned_today
+                b.due_date
             FROM borrows b
-            JOIN members m  ON m.id  = b.member_id
-            JOIN books   bk ON bk.id = b.book_id
-            WHERE b.status = 'active'
-              AND b.due_date < %s
-            ORDER BY days_overdue DESC
-            """,
-            (today, today, today)
-        )
+            JOIN members m
+                ON b.member_id = m.id
+            JOIN books bk
+                ON b.book_id = bk.id
+            WHERE b.status='active'
+            AND b.due_date < CURDATE()
+        """)
+
         overdue = cursor.fetchall()
+
         return jsonify({
-            "total_overdue":  len(overdue),
-            "overdue_borrows": overdue
-        }), 200
+            "success": True,
+            "data": overdue
+        })
+
     finally:
         cursor.close()
         conn.close()
 
 
-# ---------------------------------------------------------------------------
-# POST /member-borrow — Member borrows a book
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------
+# Member Borrow Book
+# ------------------------------------------------------------------
 
 @borrows_bp.route("/member-borrow", methods=["POST"])
 @login_required
 def member_borrow_book():
-    """Allow members to borrow books from the browse page"""
-    data    = request.get_json()
+
+    data = request.get_json()
     book_id = data.get("book_id")
 
     if not book_id:
-        return jsonify({"message": "book_id is required"}), 400
+        return jsonify({
+            "message": "book_id is required"
+        }), 400
 
     conn, cursor = get_db()
+
     try:
-        # --- Resolve member_id from session ---
-        if "member_id" in session:
-            member_id = session["member_id"]
-        else:
-            cursor.execute("SELECT id FROM members WHERE user_id=%s", (session.get("user_id"),))
-            member = cursor.fetchone()
-            if not member:
-                return jsonify({"message": "Member profile not found"}), 404
-            member_id = member["id"]
 
-        # --- Check member is active ---
-        cursor.execute("SELECT is_active FROM members WHERE id=%s", (member_id,))
+        user_id = session.get("user_id")
+
+        cursor.execute(
+            "SELECT id FROM members WHERE user_id=%s",
+            (user_id,)
+        )
+
         member = cursor.fetchone()
-        if not member["is_active"]:
-            return jsonify({"message": "Your account is deactivated. Contact admin."}), 403
 
-        # --- Check unpaid fines ---
-        cursor.execute(
-            "SELECT COUNT(*) as cnt FROM fines WHERE member_id=%s AND is_paid=FALSE",
-            (member_id,)
-        )
-        unpaid = cursor.fetchone()
-        if unpaid["cnt"] > 0:
+        if not member:
             return jsonify({
-                "message": f"You have {unpaid['cnt']} unpaid fine(s). Please pay before borrowing."
-            }), 403
+                "message": "Member profile not found"
+            }), 404
 
-        # --- Check book exists ---
-        cursor.execute("SELECT * FROM books WHERE id=%s", (book_id,))
-        book = cursor.fetchone()
-        if not book:
-            return jsonify({"message": "Book not found"}), 404
+        member_id = member["id"]
 
-        # --- Check availability ---
-        if book["available_copies"] < 1:
-            return jsonify({"message": "Sorry, no copies available for this book"}), 400
-
-        # --- Check if member already has this book borrowed ---
-        cursor.execute(
-            """
-            SELECT id FROM borrows
-            WHERE member_id=%s AND book_id=%s AND status='active'
-            """,
-            (member_id, book_id)
-        )
-        if cursor.fetchone():
-            return jsonify({"message": "You already have this book borrowed"}), 400
-
-        # --- Borrow the book ---
         borrow_date = date.today()
-        due_date    = borrow_date + timedelta(days=14)
+        due_date = borrow_date + timedelta(days=14)
 
         cursor.execute(
             """
-            INSERT INTO borrows (member_id, book_id, borrow_date, due_date)
-            VALUES (%s, %s, %s, %s)
-            """,
+            INSERT INTO borrows
             (member_id, book_id, borrow_date, due_date)
+            VALUES (%s,%s,%s,%s)
+            """,
+            (
+                member_id,
+                book_id,
+                borrow_date,
+                due_date
+            )
         )
 
-        # --- Reduce available copies ---
         cursor.execute(
-            "UPDATE books SET available_copies = available_copies - 1 WHERE id=%s",
+            """
+            UPDATE books
+            SET available_copies = available_copies - 1
+            WHERE id=%s
+            """,
             (book_id,)
         )
 
         conn.commit()
+
         return jsonify({
-            "message":     "Book borrowed successfully!",
+            "message": "Book borrowed successfully",
             "borrow_date": str(borrow_date),
-            "due_date":    str(due_date),
-            "book_title":  book["title"]
+            "due_date": str(due_date)
         }), 201
 
-    except Exception as e:
-        return jsonify({"message": f"Error: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()
